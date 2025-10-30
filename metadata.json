@@ -1,0 +1,7 @@
+{
+  "name": "Gerador de Criativos para Anúncios com IA",
+  "description": "Um aplicativo para gerar criativos de anúncios de alta performance, como imagens e vídeos, usando o poder da IA generativa do Gemini. Faça upload de uma imagem, personalize o estilo, texto e formato, e crie seu anúncio em segundos.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
