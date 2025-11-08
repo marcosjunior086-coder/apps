@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import {
   AdParams,
-  OutputFormat,
   AdStyle,
   AspectRatio,
   TextPosition,
@@ -10,7 +10,7 @@ import { generateAdCreative } from './services/geminiService';
 import { OptionButton } from './components/OptionButton';
 import { GridSelector } from './components/GridSelector';
 import { Loader } from './components/Loader';
-import { UploadIcon, ImageIcon, VideoIcon, MicIcon, StopCircleIcon, SparklesIcon } from './components/icons';
+import { UploadIcon, ImageIcon, MicIcon, StopCircleIcon, SparklesIcon } from './components/icons';
 
 // Fix: Add a utility function to convert a file to a base64 string
 const fileToBase64 = (file: File): Promise<{ base64: string, mimeType: string }> => {
@@ -29,15 +29,12 @@ const fileToBase64 = (file: File): Promise<{ base64: string, mimeType: string }>
 
 // Fix: Define the main App component
 const App: React.FC = () => {
-  const [adParams, setAdParams] = useState<Omit<AdParams, 'mainImageBase64' | 'mainImageMimeType'>>({
-    outputFormat: 'Imagem',
+  const [adParams, setAdParams] = useState<Omit<AdParams, 'mainImageBase64' | 'mainImageMimeType' | 'outputFormat'>>({
     adStyle: 'Moderno e minimalista',
     aspectRatio: '1:1',
     textPosition: 'Centro',
     visualChanges: '',
     adText: '',
-    animateImage: false,
-    animationDuration: 5,
     displayOptimization: 'Celular',
   });
   const [mainImage, setMainImage] = useState<{ file: File, preview: string } | null>(null);
@@ -47,26 +44,9 @@ const App: React.FC = () => {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
-  const [hasApiKey, setHasApiKey] = useState(false);
-
+  
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
-
-  const checkApiKey = useCallback(async () => {
-    try {
-      const selected = await window.aistudio.hasSelectedApiKey();
-      setHasApiKey(selected);
-      return selected;
-    } catch (e) {
-      console.error('Error checking for API key:', e);
-      setHasApiKey(false);
-      return false;
-    }
-  }, []);
-
-  useEffect(() => {
-    checkApiKey();
-  }, [checkApiKey]);
 
   useEffect(() => {
     if (typeof window.SpeechRecognition !== 'undefined' || typeof window.webkitSpeechRecognition !== 'undefined') {
@@ -92,18 +72,7 @@ const App: React.FC = () => {
         };
     }
   }, []);
-
-  const handleSelectApiKey = async () => {
-    try {
-      await window.aistudio.openSelectKey();
-      // Assume success and optimistically update UI
-      setHasApiKey(true);
-    } catch (e) {
-      console.error('Could not open API key selection:', e);
-      setError('Não foi possível abrir a seleção de chave de API. Por favor, recarregue a página.');
-    }
-  };
-
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setImage: React.Dispatch<React.SetStateAction<{ file: File, preview: string } | null>>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -112,7 +81,8 @@ const App: React.FC = () => {
   };
 
   const handleTextPositionChange = (position: TextPosition) => {
-    if (adParams.aspectRatio === 'proportional') return;
+    // Fix: Use 'proporcional' to match the updated AspectRatio type and fix type mismatch.
+    if (adParams.aspectRatio === 'proporcional') return;
     
     let newPositions: TextPosition[];
     if (selectedTextPositions.includes(position)) {
@@ -126,7 +96,8 @@ const App: React.FC = () => {
   
   const handleAspectRatioChange = (ratio: AspectRatio) => {
     setAdParams(prev => ({...prev, aspectRatio: ratio}));
-    if (ratio === 'proportional') {
+    // Fix: Use 'proporcional' to match the updated AspectRatio type and fix type mismatch.
+    if (ratio === 'proporcional') {
         setSelectedTextPositions([]);
         setAdParams(prev => ({...prev, textPosition: 'proporcional'}));
     } else if (selectedTextPositions.length === 0) {
@@ -151,23 +122,11 @@ const App: React.FC = () => {
       setError('Por favor, adicione uma imagem principal.');
       return;
     }
-    if (!hasApiKey) {
-        const selected = await checkApiKey();
-        if (!selected) {
-            setError('Por favor, selecione uma chave de API antes de gerar o criativo.');
-            return;
-        }
-    }
     
     setError(null);
     setResult(null);
     setIsLoading(true);
-
-    if (adParams.outputFormat === 'Vídeo') {
-        setLoadingMessage('A geração de vídeo pode levar alguns minutos. Estamos criando sua obra-prima...');
-    } else {
-        setLoadingMessage('Gerando seu criativo com IA...');
-    }
+    setLoadingMessage('Gerando seu criativo com IA...');
 
     try {
       const { base64: mainImageBase64, mimeType: mainImageMimeType } = await fileToBase64(mainImage.file);
@@ -178,22 +137,19 @@ const App: React.FC = () => {
       
       const fullParams: AdParams = {
         ...adParams,
+        outputFormat: 'Imagem',
         mainImageBase64,
         mainImageMimeType,
         inspirationalImageBase64: inspirationalImagePayload?.base64,
         inspirationalImageMimeType: inspirationalImagePayload?.mimeType,
       };
 
+      // Fix: Call generateAdCreative without apiKey as it now uses environment variables.
       const generatedResult = await generateAdCreative(fullParams);
       setResult(generatedResult);
     } catch (e: any) {
         console.error(e);
-        if (e.message?.includes("Requested entity was not found.")) {
-            setError("Sua chave de API não foi encontrada. Por favor, selecione uma chave válida.");
-            setHasApiKey(false); // Reset key state
-        } else {
-            setError(`Ocorreu um erro: ${e.message}`);
-        }
+        setError(`Ocorreu um erro: ${e.message}`);
     } finally {
       setIsLoading(false);
       setLoadingMessage('');
@@ -250,24 +206,6 @@ const App: React.FC = () => {
     </div>
   )
 
-  if (!hasApiKey) {
-    return (
-        <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-            <div className="text-center p-8 bg-gray-800 rounded-lg shadow-2xl max-w-md">
-                <h1 className="text-2xl font-bold mb-4">Bem-vindo ao Gerador de Anúncios</h1>
-                <p className="text-gray-400 mb-6">Para começar, por favor, selecione uma chave de API do Google AI Studio. A geração de vídeos requer um projeto com faturamento ativado.</p>
-                <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-400 hover:underline mb-6 block">
-                    Saiba mais sobre o faturamento.
-                </a>
-                <button onClick={handleSelectApiKey} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                    Selecionar Chave de API
-                </button>
-                {error && <p className="text-red-400 mt-4">{error}</p>}
-            </div>
-        </div>
-    );
-  }
-
   return (
     <div className="bg-gray-900 min-h-screen text-white p-4 sm:p-8 font-sans">
         {isLoading && <Loader message={loadingMessage} />}
@@ -283,17 +221,6 @@ const App: React.FC = () => {
                 
                 {renderSection('2. Definições do Anúncio', (
                     <div className="space-y-6">
-                         {renderOptionGroup("Formato de Saída", (
-                             <>
-                                <OptionButton isSelected={adParams.outputFormat === 'Imagem'} onClick={() => setAdParams({ ...adParams, outputFormat: 'Imagem' })}>
-                                    <ImageIcon className="h-5 w-5"/> Imagem
-                                </OptionButton>
-                                <OptionButton isSelected={adParams.outputFormat === 'Vídeo'} onClick={() => setAdParams({ ...adParams, outputFormat: 'Vídeo' })}>
-                                    <VideoIcon className="h-5 w-5"/> Vídeo
-                                </OptionButton>
-                             </>
-                         ))}
-
                         {renderOptionGroup("Estilo do Anúncio", (
                             <>
                                 {(['Moderno e minimalista', 'Criativo e colorido', 'Luxuoso e sofisticado', 'Alta conversão'] as AdStyle[]).map(style => (
@@ -304,8 +231,9 @@ const App: React.FC = () => {
 
                         {renderOptionGroup("Proporção", (
                              <>
-                                {(['1:1', '16:9', '9:16', '4:5', 'proportional'] as AspectRatio[]).map(ratio => (
-                                    <OptionButton key={ratio} isSelected={adParams.aspectRatio === ratio} onClick={() => handleAspectRatioChange(ratio)}>{ratio === 'proportional' ? 'Proporcional' : ratio}</OptionButton>
+                                {/* Fix: Use 'proporcional' to match the updated AspectRatio type and fix type mismatch. */}
+                                {(['1:1', '16:9', '9:16', '4:5', 'proporcional'] as AspectRatio[]).map(ratio => (
+                                    <OptionButton key={ratio} isSelected={adParams.aspectRatio === ratio} onClick={() => handleAspectRatioChange(ratio)}>{ratio === 'proporcional' ? 'Proporcional' : ratio}</OptionButton>
                                 ))}
                              </>
                          ))}
@@ -313,7 +241,7 @@ const App: React.FC = () => {
                          <div>
                             <label className="block text-sm font-medium text-gray-300">Posição do Texto</label>
                             <p className="text-xs text-gray-400 mb-2">Desabilitado se a proporção for 'Proporcional'.</p>
-                            <GridSelector selected={selectedTextPositions} onSelect={handleTextPositionChange} disabled={adParams.aspectRatio === 'proportional'} />
+                            <GridSelector selected={selectedTextPositions} onSelect={handleTextPositionChange} disabled={adParams.aspectRatio === 'proporcional'} />
                          </div>
                     </div>
                 ))}
@@ -352,11 +280,7 @@ const App: React.FC = () => {
                 {renderSection('Resultado', (
                     <div className="aspect-[1/1] bg-gray-900 rounded-lg flex items-center justify-center border-2 border-gray-700">
                         {result ? (
-                            adParams.outputFormat === 'Imagem' ? (
-                                <img src={result} alt="Anúncio gerado" className="max-h-full max-w-full object-contain"/>
-                            ) : (
-                                <video src={result} controls autoPlay loop className="max-h-full max-w-full object-contain"></video>
-                            )
+                            <img src={result} alt="Anúncio gerado" className="max-h-full max-w-full object-contain"/>
                         ) : (
                             <div className="text-center text-gray-500">
                                 <ImageIcon className="mx-auto h-16 w-16"/>
