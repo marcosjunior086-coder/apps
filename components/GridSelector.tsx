@@ -21,10 +21,10 @@ export const GridSelector: React.FC<GridSelectorProps> = ({ selected, onSelect, 
           key={pos}
           onClick={() => onSelect(pos)}
           disabled={disabled}
-          className={`h-12 w-full rounded-md transition-colors duration-200 border-2 ${
+          className={`h-12 w-full rounded-md transition-all duration-200 border-2 ${
             selected.includes(pos) 
-            ? 'bg-indigo-600 border-indigo-500' 
-            : 'bg-gray-700/50 border-gray-600 hover:bg-gray-700 hover:border-gray-500'
+            ? 'bg-brand-pink border-brand-pink' 
+            : 'bg-white/5 backdrop-blur-sm border-brand-blue/70 hover:border-brand-blue hover:shadow-brand-glow'
           } ${
             disabled ? 'cursor-not-allowed' : ''
           }`}

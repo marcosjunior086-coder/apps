@@ -1,3 +1,4 @@
+
 // Fix: Import GoogleGenAI and other necessary types from @google/genai
 import { GoogleGenAI, Modality, Part } from "@google/genai";
 import { AdParams } from '../types';
@@ -18,8 +19,11 @@ export const generateAdCreative = async (params: AdParams): Promise<string> => {
     ];
 
     let prompt = `Com base na imagem fornecida, crie uma imagem de anúncio no estilo "${params.adStyle}".\n`;
-    prompt += `Adicione o seguinte texto: "${params.adText}".\n`;
-    prompt += `Posicione o texto em: ${params.textPosition}.\n`;
+    
+    if (params.adText && params.adText.trim()) {
+        prompt += `Adicione o seguinte texto: "${params.adText}".\n`;
+        prompt += `Posicione o texto em: ${params.textPosition}.\n`;
+    }
     
     if (params.inspirationalImageBase64 && params.inspirationalImageMimeType) {
         parts.push({
@@ -31,7 +35,10 @@ export const generateAdCreative = async (params: AdParams): Promise<string> => {
         prompt += `Use a segunda imagem como inspiração para o estilo visual.\n`;
     }
     
-    prompt += `Aplique as seguintes alterações visuais: "${params.visualChanges}".\n`;
+    if (params.visualChanges && params.visualChanges.trim()) {
+      prompt += `Aplique as seguintes alterações visuais: "${params.visualChanges}".\n`;
+    }
+
     prompt += `Otimize o anúncio para visualização em ${params.displayOptimization}.\n`;
 
     parts.push({ text: prompt });
